@@ -250,8 +250,11 @@ void myImShow(char *imageName, Mat &image, int isZip, int isSave)
 
 
 //验证是否是方块
-bool findBloak(Mat & image, Rect & rect)
+bool findBloak(Mat & image, Rect & rect,Rect & rectOut)
 {
+	int rectX, rectY, rectWidth, rectHeight;
+	int rectEndX;
+
 	int x = rect.tl().x;
 	int y = rect.tl().y + rect.height / 2;
 
@@ -260,13 +263,14 @@ bool findBloak(Mat & image, Rect & rect)
 	int y2_1, y2_2;
 
 	int i = 0;
-	int width[10];
 
 	if (x < rect.width || x > image.cols - rect.width)
 		return false;
 
 	//x -= rect.width / 2;		//左移部分，保证监测到边沿
-	int edge_last = 0;
+
+	//x增大方向判断
+	int edge_last = x;
 	int edge_cur = 0;
 	int y1_sign = 0;			//一阶导方向
 	while (1)
@@ -300,7 +304,6 @@ bool findBloak(Mat & image, Rect & rect)
 			else if ((y1_sign < 0) && (y1_1 > 0))
 			{
 				edge_cur = x;
-				width[i] = edge_cur - edge_last;
 				edge_last = edge_cur;
 				y1_sign = y1_1;
 				i++;
@@ -314,12 +317,77 @@ bool findBloak(Mat & image, Rect & rect)
 
 
 		x++;
-		if ((x - edge_last > rect.width * 3) || (x == image.cols))
+		if ((y1_sign > 0)?(x - edge_last > rect.width * 3):(x - edge_last > rect.width * 1.5) || (x == image.cols))
 		{
-			return false;
+			if (i > 9)
+			{
+				rectEndX = x;
+				break;
+			}
+			else
+				return false;
 		}
-		if (i > 5)
+	}
+
+	//x减小方向判断
+	x = rect.tl().x;
+	edge_last = x;
+	edge_cur = 0;
+	y1_sign = 0;			//一阶导方向
+	while (1)
+	{
+		//零阶
+		y0_0 = image.at<uchar>(y, x);
+		y0_1 = image.at<uchar>(y, x - 1);
+		y0_2 = image.at<uchar>(y, x - 2);
+		y0_3 = image.at<uchar>(y, x - 3);
+
+		//一阶导
+		y1_1 = y0_1 - y0_2;
+		y1_2 = y0_2 - y0_3;
+		{
+			if ((abs(y1_1) < abs(y1_2)) && ((y1_1 >= 0) == (y1_2 >= 0)))
+				y1_1 = y1_2;
+		}
+
+		//二阶导
+		y2_1 = y0_0 - (y0_1 * 2) + y0_2;
+		y2_2 = y0_1 - (y0_2 * 2) + y0_3;
+
+		//二阶导为0点，一阶导极大/极小值，可能是边沿
+		if (!y2_1 || ((y2_1 > 0) ? y2_2 < 0 : y2_2>0))
+		{
+			if (!y1_sign && y1_1)
+			{
+				edge_last = edge_cur = x;
+				y1_sign = y1_1;
+			}
+			else if ((y1_sign > 0) && (y1_1 < 0))
+			{
+				edge_cur = x;
+				edge_last = edge_cur;
+				y1_sign = y1_1;
+			}
+			else if ((y1_sign < 0) && (y1_1 > 0))
+			{
+				edge_last = x;
+				y1_sign = y1_1;
+			}
+		}
+
+		x--;
+		if ((y1_sign < 0) ? (edge_last - x > rect.width * 3) : (edge_last - x  > rect.width * 1.5) || (x == 5))
+		{
+			rectX = x;
+			rectY = rect.tl().y;
+			rectHeight = rect.height;
+			rectWidth = rectEndX - rectX;
+			rectOut.height = rectHeight;
+			rectOut.width = rectWidth;
+			rectOut.x = rectX;
+			rectOut.y = rectY;
 			return true;
+		}
 	}
 	
 

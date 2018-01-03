@@ -20,7 +20,7 @@ MatND myCalcHist(Mat imageGray, int isShow);
 int findDirection(Mat &inputImageX, Mat &inputImageY, Mat &outputImage, int type);
 int eraseBackground(Mat &inputImage, Mat &outputImage, int threshold);
 void myImShow(char *imageName, Mat &image, int isZip, int isSave);
-bool findBloak(Mat &image, Rect &rect);
+bool findBloak(Mat &image, Rect &rect, Rect & rectOut);
 
 
 #endif // !_SOURCE_H

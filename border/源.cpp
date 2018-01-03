@@ -88,6 +88,7 @@ int main(int argc, char *argv[])
 	printf("counters:%d\r\n", contours.size());
 	int imageWidth = imageRotate.cols;
 	int j = 0;
+	Vector<Rect> rectVector;
 	for (int i = 0;i<contours.size();i++)
 	{
 		Rect rect = boundingRect((Mat)contours[i]);
@@ -97,14 +98,28 @@ int main(int argc, char *argv[])
 			{
 				int xCurent = rect.tl().x;
 				int yCenter = rect.tl().y + rect.height;
-				
-				if (findBloak(imageGrayRotate, rect))
+				int rectI;
+				for (rectI = 0; rectI < rectVector.size();rectI++)
 				{
-					printf("height:%d;width:%d\r\n", rect.height, rect.width);
-					printf("x:%d,y:%d\r\n", xCurent, yCenter);
-					rectangle(imageRotate, rect, Scalar(255), 2);
-					//break;
+					Rect rectT = rectVector[rectI];
+					if ((xCurent > rectT.tl().x) && (xCurent < rectT.tl().x + rectT.width) && (yCenter > rectT.tl().y) && (yCenter < rectT.tl().y + rectT.height))
+					{
+						break;
+					}
 				}
+
+				if (rectI == rectVector.size())
+				{
+					Rect rectTem;
+					if (findBloak(imageGrayRotate, rect, rectTem))
+					{
+						rectVector.push_back(rectTem);
+						printf("height:%d;width:%d\r\n", rect.height, rect.width);
+						printf("x:%d,y:%d\r\n", xCurent, yCenter);
+						rectangle(imageRotate, rectTem, Scalar(255), 2);
+					}
+				}
+				
 			}
 			
 		}
