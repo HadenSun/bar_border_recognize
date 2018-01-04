@@ -227,7 +227,7 @@ void myImShow(char *imageName, Mat &image, int isZip, int isSave)
 	Mat imagZip;
 	if (isZip)
 	{
-		resize(image, imagZip, Size(), 0.2, 0.2);
+		resize(image, imagZip, Size(), ZIPTIME, ZIPTIME);
 	}
 	else
 	{

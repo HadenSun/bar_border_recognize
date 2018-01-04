@@ -12,6 +12,7 @@ using namespace std;
 using namespace cv;
 
 #define ZIP 1
+#define ZIPTIME 0.17
 
 int findThresholdAverage(MatND hist);
 bool IsDimodal(double HistGram[]);

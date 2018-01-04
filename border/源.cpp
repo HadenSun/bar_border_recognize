@@ -3,13 +3,17 @@
 #include "imgproc/imgproc.hpp"
 #include <math.h>
 #include "source.h"
+#include "zbar.h"
+#include <iostream>
 
 #define PI 3.1415926
 
 using namespace std;
 using namespace cv;
+using namespace zbar;
 
-#define ZIP 1
+
+
 
 
 
@@ -23,23 +27,23 @@ int main(int argc, char *argv[])
 
 	//2. 转化为灰度图
 	cvtColor(image, imageGray, CV_RGB2GRAY);
-	//myImShow("2.灰度图", imageGray,ZIP,0);
+	myImShow("2.灰度图", imageGray,ZIP,0);
 
 	//3. 高斯平滑滤波
 	GaussianBlur(imageGray, imageGuussian, Size(9, 9), 0);
-	//myImShow("3.高斯平衡滤波", imageGuussian,ZIP,0);
+	myImShow("3.高斯平衡滤波", imageGuussian,ZIP,0);
 
-	//二值化
+	//4. 双峰谷底二值化
 	MatND histG = myCalcHist(imageGuussian, 0);
 	int vally = findThresholdVally(histG);
 	printf("二值化阈值：%d\r\n", vally);
 	Mat imageThreshold;
 	threshold(imageGray, imageThreshold, vally, 255, CV_THRESH_BINARY);
 	//eraseBackground(imageGuussian, imageThreshold, vally);
-	//myImShow("二值化", imageThreshold,ZIP,0);
+	myImShow("二值化", imageThreshold,ZIP,0);
 
 
-	//4.求得水平和垂直方向灰度图像的梯度差,使用Sobel算子
+	//5.求得水平和垂直方向灰度图像的梯度差,使用Sobel算子
 	Mat imageX16S, imageY16S;
 	Mat imageSobelX, imageSobelY;
 	Mat imageDirection;
@@ -49,9 +53,9 @@ int main(int argc, char *argv[])
 	convertScaleAbs(imageY16S, imageSobelY, 1, 0);
 	findDirection(imageSobelX, imageSobelY, imageDirection,0);
 
-	//myImShow("X方向", imageSobelX,ZIP,0);
-	//myImShow("Y方向", imageSobelY,ZIP,0);
-	//myImShow("方向", imageDirection,ZIP,0);
+	myImShow("X方向", imageSobelX,ZIP,0);
+	myImShow("Y方向", imageSobelY,ZIP,0);
+	myImShow("方向", imageDirection,ZIP,1);
 
 	//绘制直方图
 	MatND hist = myCalcHist(imageDirection, 0);
@@ -78,9 +82,9 @@ int main(int argc, char *argv[])
 	warpAffine(image, imageRotate, rot, bbox.size(), INTER_LINEAR, BORDER_CONSTANT,borderColor);
 	warpAffine(imageThreshold, imageThresholdRotate, rot, bbox.size());
 	warpAffine(imageGray, imageGrayRotate, rot, bbox.size());
-	myImShow("rotate", imageThresholdRotate, ZIP, 1);
+	myImShow("5.旋转图像", imageThresholdRotate, ZIP, 1);
 
-	//找连通区域
+	//6. 找连通区域
 	vector<vector<Point>> contours;
 	vector<Vec4i> hiera;
 	Mat imageInvers = 255 - imageThresholdRotate;
@@ -111,8 +115,23 @@ int main(int argc, char *argv[])
 				if (rectI == rectVector.size())
 				{
 					Rect rectTem;
+
+					//横向过滤
 					if (findBloak(imageGrayRotate, rect, rectTem))
 					{
+						//条形码识别
+						ImageScanner scanner;
+						scanner.set_config(ZBAR_NONE, ZBAR_CFG_ENABLE, 1);
+						Mat imageCut = Mat(imageGrayRotate, rectTem);
+						Mat imageCopy = imageCut.clone();
+						uchar *raw = (uchar *)imageCopy.data;
+						Image imageZbar(imageCopy.cols, imageCopy.rows, "Y800", raw, imageCopy.cols * imageCopy.rows);
+						scanner.scan(imageZbar);		//扫描条形码
+						Image::SymbolIterator sybmol = imageZbar.symbol_begin();
+						if (imageZbar.symbol_begin() == imageZbar.symbol_end())
+						{
+							continue;
+						}
 						rectVector.push_back(rectTem);
 						printf("height:%d;width:%d\r\n", rect.height, rect.width);
 						printf("x:%d,y:%d\r\n", xCurent, yCenter);
@@ -124,7 +143,8 @@ int main(int argc, char *argv[])
 			
 		}
 	}
-	myImShow("10.找出二维码矩形区域", imageRotate,ZIP,1);
+	namedWindow("6. 找出二维码矩形区域",0);
+	myImShow("6. 找出二维码矩形区域", imageRotate,ZIP,1);
 
 
 	
