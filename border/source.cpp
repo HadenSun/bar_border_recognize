@@ -1,6 +1,8 @@
 #include "source.h"
 
 //平均值法找二值化阈值
+//参数：	hist：直方图计算结果
+//返回值：	灰度均值
 int findThresholdAverage(MatND hist)
 {
 	double histMaxValue;
@@ -18,7 +20,10 @@ int findThresholdAverage(MatND hist)
 	return (int)(avr / sum);
 }
 
-bool IsDimodal(double HistGram[])       // 检测直方图是否为双峰的  
+//检测直方图是否为双峰的  
+//参数：	HistGram[] 直方图数组
+//返回值：	是否为双峰
+bool IsDimodal(double HistGram[])       
 {
 	// 对直方图的峰进行计数，只有峰数位2才为双峰   
 	int Count = 0;
@@ -37,6 +42,8 @@ bool IsDimodal(double HistGram[])       // 检测直方图是否为双峰的
 }
 
 //谷底最小值二值化阈值
+//参数：	hist 直方图
+//返回值：	谷底灰度值
 int findThresholdVally(MatND hist)
 {
 	int Y, Iter = 0;
@@ -75,8 +82,10 @@ int findThresholdVally(MatND hist)
 
 
 //计算直方图
-//isShow	-0 不绘制
-//			-1 绘制
+//参数：	imageGray 灰度图像
+//参数：	isShow	-0 不绘制
+//					-1 绘制
+//返回值：	灰度直方图数组
 MatND myCalcHist(Mat imageGray, int isShow)
 {
 	//计算直方图
@@ -86,16 +95,6 @@ MatND myCalcHist(Mat imageGray, int isShow)
 	float midRanges[] = { 0,256 };
 	const float *ranges[] = { midRanges };
 	calcHist(&imageGray, 1, &channels, Mat(), dstHist, 1, histSize, ranges, true, false);
-	//images(&imageGray):输入图像指针，可以多幅，要求必须同样深度
-	//nimages(1):输入图像个数
-	//channels(&channels):计算直方图的channels的数组
-	//mask(Mat()):掩码，如果mask不为空，必须是一个8位（CV_8U）数组
-	//hist(hstHist):每一维上直方图的元素个数
-	//dims（1）：直方图维数
-	//histSize（histSize)：直方图每维元素个数
-	//ranges（ranges）：直方图每维范围
-	//uniform（true）：ture说明需要计算的直方图的每一维按照它的范围和尺寸取均值
-	//accumulate（false）：是否对hist清零，不清零计算多幅直方图累加
 
 	if (isShow)
 	{
@@ -120,71 +119,52 @@ MatND myCalcHist(Mat imageGray, int isShow)
 }
 
 //查找梯度最多方向
-//type：0-灰度图像
-//		1-彩色图像
-int findDirection(Mat &inputImageX, Mat &inputImageY, Mat &outputImage, int type)
+//参数：	inputImageX x方向梯度图像
+//参数：	inputImageY y方向梯度图像
+//参数：	outputImage 输出结果图像
+//返回值：	0  - 正常
+//			-1 - 异常
+int findDirection(Mat &inputImageX, Mat &inputImageY, Mat &outputImage)
 {
 	if (inputImageX.cols != inputImageY.cols)
 		return -1;
 	if (inputImageX.rows != inputImageY.rows)
 		return -1;
 
-	if (type)
-		outputImage = Mat::zeros(inputImageX.rows, inputImageX.cols, CV_8UC3);
-	else
-		outputImage.create(inputImageX.size(), inputImageX.type());
+	outputImage.create(inputImageX.size(), inputImageX.type());
 
-	uchar* dataX = inputImageX.ptr<unsigned char>(0);
-	uchar* dataY = inputImageY.ptr<unsigned char>(0);
-	uchar* data = outputImage.ptr<unsigned char>(0);
+	short* dataX = inputImageX.ptr<short>(0);
+	short* dataY = inputImageY.ptr<short>(0);
+	short* data = outputImage.ptr<short>(0);
 
 	int i, j;
 	for (i = 0; i < inputImageX.rows;i++)
 	{
 		for (j = 0; j < inputImageX.cols;j++)
 		{
-			if (*dataY < 50 && *dataX < 50)
+			if (*dataY < 20 && *dataY > -20 && *dataX > -20 && *dataX < 20)
 			{
-				if (type)
-				{
-					outputImage.at<Vec3b>(i, j)[0] = 0;
-					outputImage.at<Vec3b>(i, j)[1] = 0;
-				}
-				else
-				{
-					*data = 0;
-				}
+				//梯度变化过小的剔除
+				*data = 0;
 			}
 			else if (*dataX == 0)
 			{
-				if (type)
-				{
-					outputImage.at<Vec3b>(i, j)[0] = 255;
-					outputImage.at<Vec3b>(i, j)[1] = 255;
-				}
-				else
+				if (*dataY != 0)
 				{
 					*data = 255;
 				}
+				else
+				{	
+					*data = 0;
+				}
 			}
 			else
-			{
-				if (type)
-				{
-					outputImage.at<Vec3b>(i, j)[0] = 255;
-					outputImage.at<Vec3b>(i, j)[1] = atan(*dataY / *dataX) / PI * 2 * 254 + 1;
-				}
-				else
-				{
-					*data = atan(*dataY / *dataX) / PI * 2 * 254 + 1;
-				}
-
-			}
-			if (type)
-			{
-				outputImage.at<Vec3b>(i, j)[2] = 0;
-				if (outputImage.at<Vec3b>(i, j)[1] == 1)
-					outputImage.at<Vec3b>(i, j)[2] = 255;
+			{				
+				*data = atan((float)*dataY / (float)*dataX) / PI * 2 * 254;
+				//无意义数据/两个方向梯度都是0的数据，放在0里
+				//结果小于1的取整为0，存为1
+				if (*data == 0)
+					(*data)++;
 			}
 			data++;
 			dataX++;
@@ -197,6 +177,11 @@ int findDirection(Mat &inputImageX, Mat &inputImageY, Mat &outputImage, int type
 }
 
 //背景分离
+//背景摸为全黑0，其他不变
+//参数：	inputImage 输入图像
+//参数：	outputImage 输出图像
+//参数：	threshold 阈值
+//返回值：	0 - 正常
 int eraseBackground(Mat &inputImage, Mat &outputImage, int threshold)
 {
 	outputImage.create(inputImage.size(), inputImage.type());
@@ -222,6 +207,10 @@ int eraseBackground(Mat &inputImage, Mat &outputImage, int threshold)
 }
 
 //图像显示，附带压缩显示和保存
+//参数：	imageName 图像名称
+//参数：	iamge 图像
+//参数：	isZip 是否压缩显示 1-压缩 0-不压缩
+//参数：	isSave 是否保存图片（不受上一参数影响，全分辨率保存） 1-保存 0-不保存
 void myImShow(char *imageName, Mat &image, int isZip, int isSave)
 {
 	Mat imagZip;
@@ -249,7 +238,11 @@ void myImShow(char *imageName, Mat &image, int isZip, int isSave)
 }
 
 
-//验证是否是方块
+//验证是否是条形码区域
+//参数：	image 图像
+//参数：	rect 感兴趣区域
+//参数：	rectOut 条形码区域
+//返回值：	是否是条形码
 bool findBloak(Mat & image, Rect & rect,Rect & rectOut)
 {
 	int rectX, rectY, rectWidth, rectHeight;
@@ -301,6 +294,7 @@ bool findBloak(Mat & image, Rect & rect,Rect & rectOut)
 				edge_last = edge_cur = x;
 				y1_sign = y1_1;
 			}
+			//黑框后沿
 			else if ((y1_sign < 0) && (y1_1 > 0))
 			{
 				edge_cur = x;
@@ -308,6 +302,7 @@ bool findBloak(Mat & image, Rect & rect,Rect & rectOut)
 				y1_sign = y1_1;
 				i++;
 			}
+			//黑框前沿
 			else if ((y1_sign > 0) && (y1_1 < 0))
 			{
 				edge_last = x;
@@ -317,10 +312,13 @@ bool findBloak(Mat & image, Rect & rect,Rect & rectOut)
 
 
 		x++;
+		//黑框不超过感兴趣区域1.5倍宽
+		//白色部分不超过感兴趣区域3倍宽
 		if ((y1_sign > 0)?(x - edge_last > rect.width * 3):(x - edge_last > rect.width * 1.5) || (x == image.cols))
 		{
 			if (i > 9)
 			{
+				//连续9个符合区域，是条形区域
 				rectEndX = x;
 				break;
 			}
@@ -362,12 +360,14 @@ bool findBloak(Mat & image, Rect & rect,Rect & rectOut)
 				edge_last = edge_cur = x;
 				y1_sign = y1_1;
 			}
+			//黑框前沿
 			else if ((y1_sign > 0) && (y1_1 < 0))
 			{
 				edge_cur = x;
 				edge_last = edge_cur;
 				y1_sign = y1_1;
 			}
+			//黑框后沿
 			else if ((y1_sign < 0) && (y1_1 > 0))
 			{
 				edge_last = x;
@@ -392,4 +392,33 @@ bool findBloak(Mat & image, Rect & rect,Rect & rectOut)
 	
 
 	return false;
+}
+
+//16位图像找直方图最大值
+//输入数据范围-255 -- +254
+//0为无效数据
+//参数：	image 输入图像
+//返回值：	直方图最大值
+int hist16S(Mat &image)
+{
+	int maxLoc = 0;
+	int maxValue = 0;
+	double hist[512] = { 0 };
+
+	short *data = image.ptr<short>(0);
+	
+	for (int i = 0; i < image.rows;i++)
+	{
+		for (int j = 0;j < image.cols;j++)
+		{
+			hist[*data + 255]++;
+			if (hist[*data + 255] > maxValue && *data != 0)
+			{
+				maxLoc = *data;
+				maxValue = hist[*data + 255];
+			}
+			data++;
+		}
+	}
+	return maxLoc;
 }
