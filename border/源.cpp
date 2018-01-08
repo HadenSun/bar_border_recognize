@@ -19,20 +19,20 @@ int main(int argc, char *argv[])
 	1. 打开图像
 	----------------------------------------*/
 	image = imread(argv[1]);
-	myImShow("1.原图像", image,ZIP,0);
+	myImShow("1.原图像", image,ZIP,1);
 
 	/*----------------------------------------
 	2.转化为灰度图
 	----------------------------------------*/
 	cvtColor(image, imageGray, CV_RGB2GRAY);
 	//为了方便，对图片压缩、保存进行了封装
-	myImShow("2.灰度图", imageGray,ZIP,0);
+	myImShow("2.灰度图", imageGray,ZIP,1);
 
 	/*----------------------------------------
 	3. 高斯平滑滤波 
 	----------------------------------------*/
 	GaussianBlur(imageGray, imageGuussian, Size(9, 9), 0);
-	myImShow("3.高斯平衡滤波", imageGuussian,ZIP,0);
+	myImShow("3.高斯平衡滤波", imageGuussian,ZIP,1);
 
 	/*----------------------------------------
 	4. 双峰谷底法寻找阈值二值化
@@ -45,7 +45,7 @@ int main(int argc, char *argv[])
 	//二值化
 	Mat imageThreshold;
 	threshold(imageGray, imageThreshold, vally, 255, CV_THRESH_BINARY);
-	myImShow("二值化", imageThreshold,ZIP,0);
+	myImShow("二值化", imageThreshold,ZIP,1);
 
 	/*----------------------------------------
 	5. 判断条形码方向并旋转
@@ -71,9 +71,9 @@ int main(int argc, char *argv[])
 	convertScaleAbs(imageX16S, imageSobelX, 1, 0);
 	convertScaleAbs(imageY16S, imageSobelY, 1, 0);
 	convertScaleAbs(imageDirection, imageDirection, 1, 0);
-	myImShow("X方向", imageSobelX,ZIP,0);
-	myImShow("Y方向", imageSobelY,ZIP,0);
-	myImShow("5. 方向", imageDirection,ZIP,0);
+	myImShow("X方向", imageSobelX,ZIP,1);
+	myImShow("Y方向", imageSobelY,ZIP,1);
+	myImShow("5. 方向", imageDirection,ZIP,1);
 
 	//旋转图像
 	double angle = max / 255.0 * 90;
@@ -94,7 +94,7 @@ int main(int argc, char *argv[])
 	warpAffine(image, imageRotate, rot, bbox.size(), INTER_LINEAR, BORDER_CONSTANT,borderColor);
 	warpAffine(imageThreshold, imageThresholdRotate, rot, bbox.size());
 	warpAffine(imageGray, imageGrayRotate, rot, bbox.size());
-	myImShow("5.旋转图像", imageThresholdRotate, ZIP, 1);
+	myImShow("5.旋转图像", imageGrayRotate, ZIP, 1);
 
 	/*----------------------------------------
 	6. 找连通区域
